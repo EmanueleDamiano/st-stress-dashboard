@@ -13,9 +13,29 @@ df['Composite'] = df['Employee'] + '\n' + df['Product Line'] + '\n' + df['Activi
 st.header('Population Stress Monitoring')
 st.subheader("stress levels:")
 st.divider()
-st.text(f"Population Minimum Stress: {round(df['Stress'].min(),2)}")
-st.text(f"Population Average Stress: {round(df['Stress'].mean(),2)}")
-st.text(f"Population Max Stress: {round(df['Stress'].max(),2)}")
+with st.container():
+
+    pop_min_stress = st.text(f"Population Minimum Stress: {round(df['Stress'].min(),2)}")
+    pop_avg_stress = st.text(f"Population Average Stress: {round(df['Stress'].mean(),2)}")
+    pop_max_stress = st.text(f"Population Max Stress: {round(df['Stress'].max(),2)}")
+## display stress by gender
+## by company role
+stress_levels = {
+    # "Population Stress:"    : [round(df['Stress'].min(),2),round(df['Stress'].mean(),2),round(df['Stress'].max(),2)],
+    "Company Role"              : [i for i in df.groupby(by = 'Role')['Stress'].mean().keys()],
+    "Avg Stress"                    : [i for i in round(df.groupby(by = 'Role')['Stress'].mean(),2).values],
+    "Employee Gender"           : [i for i in df.groupby(by = 'Gender')['Stress'].mean().keys()],
+    "Avg Stress Gender"                    : [i for i in round(df.groupby(by = 'Gender')['Stress'].mean(),2).values],
+    "Shift"                     : [i for i in df.groupby(by = 'Shift')['Stress'].mean().keys()],
+    "Avg Stress Shift"                    : [i for i in round(df.groupby(by = 'Shift')['Stress'].mean(),2).values],
+}
+# df_stress_levels = pd.DataFrame(stress_levels)
+
+df_stress_levels = pd.DataFrame(dict([(k, pd.Series(v)) for k, v in stress_levels.items()]))
+df_stress_levels = df_stress_levels.reset_index(drop=True)
+df_stress_levels = df_stress_levels.style.applymap(lambda x: 'background-color: yellow', subset=['Avg Stress','Avg Stress Gender','Avg Stress Shift'])
+
+st.table(df_stress_levels)
 # st.divider()
 # st.subheader("stress conditioned by company role")
 # st.text(f"{df.groupby(by = 'Role')['Stress'].mean()}")
@@ -53,9 +73,26 @@ filtered_stress = df[
 second_filter_options = filtered_stress["Employee"].unique()
 st.sidebar.markdown("---")
 employee_linechart   = st.sidebar.multiselect('Select Employee for the linechaert:', second_filter_options, default=second_filter_options)
+
 ## filtro su giorni selezionati 
 min_day_to_display = st.sidebar.select_slider("Dispaly data from this day",  options = df["Day"],value = df["Day"].min())
 max_day_to_display = st.sidebar.select_slider("Display data until this day", options = df["Day"],value = df["Day"].max())
+
+shift_linechart     = st.sidebar.multiselect("Select Working Shift", options = filtered_stress["Shift"].unique(), default=filtered_stress["Shift"].unique() )
+pl_linechart         = st.sidebar.multiselect('select linehcart Product Lines', filtered_stress["Product Line"].unique(), default = filtered_stress["Product Line"].unique())
+activity_linechart   = st.sidebar.multiselect('select linehcart Activities:', filtered_stress["Activity"].unique(), default = df["Activity"].unique())
+ws_linechart         = st.sidebar.multiselect('select linehcart Workstations:', filtered_stress["Workstation"].unique(), default = filtered_stress["Workstation"].unique())
+
+
+css_body_container = f'''
+<style>
+    [data-testid="stSidebar"] + section [data-testid="stVerticalBlock"] div:nth-of-type({1})
+    [data-testid="stVerticalBlock"] {{background-color:rgba(230,245,39,.8)}}
+</style>
+'''
+
+
+st.markdown(css_body_container,unsafe_allow_html=True)
 
 ## si selezionano le osservazioni restituite dal secondo filtro 
 ## oppure quelle ritornate dal primo, che sono state già applicate sul barplot 
@@ -74,9 +111,9 @@ df_lineplot = pd.DataFrame(line_chart_filter["Stress"].values, index = indexes)
 
 if not filtered_stress.empty:
     fig = plt.figure(figsize = (24,12))
-    g = sn.FacetGrid(filtered_stress,col="Employee")
+    g = sn.FacetGrid(filtered_stress,col="Employee",height=10)
     g.map_dataframe(sn.barplot,x = "Activity", y = "Stress", hue = "Workstation",errorbar = None,palette = "pastel")
-    g.set_titles(col_template="{col_name}")
+    g.set_titles(col_template="{col_name}",size=35)
 
     g.add_legend()
     st.pyplot(g)
